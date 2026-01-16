@@ -22,7 +22,7 @@
           <div class="field">
             <label for="user">Vimeo Username / Profile URL</label>
             <input id="user" placeholder="e.g. melies or https://vimeo.com/melies" value="" />
-            <div class="help">Uses: https://vimeo.com/api/v2/&lt;username&gt;/videos.json</div>
+            <div class="help">Example API: https://vimeo.com/api/v2/&lt;username&gt;/videos.json</div>
           </div>
 
           <div class="field">
@@ -39,7 +39,7 @@
         </div>
 
         <div class="actions">
-          <button id="btnGenerate" class="btn btnPrimary" type="button">Generate</button>
+          <button id="btnGenerate" class="btn btnPrimary">Generate</button>
           <button id="btnReset" class="btn btnGhost" type="button">Reset</button>
         </div>
 
@@ -92,46 +92,40 @@
       $alert.textContent = "";
     }
 
-    // NO PARAMS IN SCRIPT
     function buildEmbedCode(user, limit, cols) {
+      // Data-attributes pattern (like your YouTube widget):
+      // No query params needed in the script src.
+      const origin = location.origin;
       const div = `<div class="vimeo-latest" data-user="${user}" data-limit="${limit}" data-cols="${cols}"></div>`;
-      // IMPORTANT: escape </script> inside a script block
-      const script = `<script async src="${location.origin}/widget.js"><\/script>`;
+      // IMPORTANT: escaped closing script tag inside a <script> block
+      const script = `<script async src="${origin}/widget.js"><\/script>`;
       return div + "\n" + script;
     }
 
-    function setPreviewEmpty() {
-      $status.textContent = "Not loaded";
-      $preview.innerHTML = `<div class="previewEmpty">Generate an embed to preview.</div>`;
+    function setPreviewLoading() {
+      $status.textContent = "Loading...";
+      $preview.innerHTML = `<div class="previewLoading">Loading preview…</div>`;
     }
 
     async function loadPreview(user, limit, cols) {
-      $status.textContent = "Loading...";
-      $preview.innerHTML = `<div class="previewLoading">Loading preview…</div>`;
+      setPreviewLoading();
 
-      // mount
+      // Create the widget mount in preview
       $preview.innerHTML = `<div class="vimeo-latest" data-user="${user}" data-limit="${limit}" data-cols="${cols}"></div>`;
 
-      // load widget.js fresh
+      // Load widget.js fresh
       const s = document.createElement("script");
       s.src = `${location.origin}/widget.js?t=${Date.now()}`;
       s.async = true;
 
-      s.onload = () => { $status.textContent = "Preview loaded"; };
-      s.onerror = () => { $status.textContent = "Failed to load"; };
+      s.onload = () => {
+        $status.textContent = "Preview loaded";
+      };
+      s.onerror = () => {
+        $status.textContent = "Failed to load";
+      };
 
       document.body.appendChild(s);
-    }
-
-    function resetAll() {
-      $user.value = "";     // ✅ no default username
-      $limit.value = "6";
-      $cols.value = "2";
-      $embed.textContent = "";
-      $copy.disabled = true;
-      hideAlert();
-      setPreviewEmpty();
-      $user.focus();
     }
 
     document.getElementById("btnGenerate").addEventListener("click", async () => {
@@ -145,21 +139,30 @@
         showAlert("Please enter a Vimeo username or profile URL.", "error");
         $embed.textContent = "";
         $copy.disabled = true;
-        setPreviewEmpty();
+        $status.textContent = "Not loaded";
+        $preview.innerHTML = `<div class="previewEmpty">Generate an embed to preview.</div>`;
         return;
       }
 
-      // Escape quotes so data-user doesn't break
-      const safeUser = rawUser.replace(/"/g, "&quot;");
-
-      $embed.textContent = buildEmbedCode(safeUser, limit, cols);
+      const code = buildEmbedCode(rawUser.replace(/"/g, "&quot;"), limit, cols);
+      $embed.textContent = code;
       $copy.disabled = false;
 
       showAlert("Embed code generated successfully!", "success");
       await loadPreview(rawUser, limit, cols);
     });
 
-    document.getElementById("btnReset").addEventListener("click", resetAll);
+    document.getElementById("btnReset").addEventListener("click", () => {
+      $user.value = "";              // ✅ no default username
+      $limit.value = "6";
+      $cols.value = "2";
+      $embed.textContent = "";
+      $copy.disabled = true;
+      hideAlert();
+      $status.textContent = "Not loaded";
+      $preview.innerHTML = `<div class="previewEmpty">Generate an embed to preview.</div>`;
+      $user.focus();
+    });
 
     $copy.addEventListener("click", async () => {
       const txt = $embed.textContent.trim();
@@ -167,9 +170,6 @@
       await navigator.clipboard.writeText(txt);
       showAlert("Copied to clipboard!", "success");
     });
-
-    // Start clean
-    resetAll();
   </script>
 </body>
 </html>

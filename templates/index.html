@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vimeo Latest Widget</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>Vimeo Latest Widget</h1>
+      <p class="sub">
+        Paste a Vimeo username or profile URL → preview → copy embed code. No Vimeo API key required (public videos only).
+      </p>
+    </header>
+
+    <section class="panel">
+      <div class="grid">
+        <div class="field">
+          <label for="user">Vimeo username or profile URL</label>
+          <input id="user" placeholder="e.g. melies or https://vimeo.com/melies" value="melies" />
+          <div class="hint">
+            Uses: https://vimeo.com/api/v2/&lt;username&gt;/videos.json
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="limit">Videos (1–16)</label>
+          <input id="limit" type="number" min="1" max="16" value="6" />
+        </div>
+
+        <div class="field">
+          <label for="cols">Grid columns (1–4)</label>
+          <input id="cols" type="number" min="1" max="4" value="3" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btnPreview">Preview</button>
+        <button id="btnCopy">Copy Embed Code</button>
+      </div>
+
+      <div class="codebox">
+        <div class="codehdr">Embed code</div>
+        <pre id="embedCode"></pre>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="codehdr">Live preview</div>
+      <div id="vimeo-widget"></div>
+    </section>
+
+    <footer class="foot">
+      <small>
+        Tip: if a user's videos are private/unavailable, the feed can't be loaded without OAuth/API.
+      </small>
+    </footer>
+  </div>
+
+  <script>
+    function buildEmbed(user, limit, cols) {
+      const src =
+        `${location.origin}/widget.js?user=${encodeURIComponent(user)}` +
+        `&limit=${encodeURIComponent(limit)}` +
+        `&cols=${encodeURIComponent(cols)}`;
+
+      // IMPORTANT: escaped closing script tag
+      return `<div class="vimeo-latest-widget"></div>\n` +
+             `<script async src="${src}"><\/script>`;
+    }
+
+    function setEmbedText() {
+      const user = document.getElementById("user").value.trim();
+      const limit = document.getElementById("limit").value;
+      const cols = document.getElementById("cols").value;
+      document.getElementById("embedCode").textContent = buildEmbed(user, limit, cols);
+    }
+
+    async function preview() {
+      setEmbedText();
+      const mount = document.getElementById("vimeo-widget");
+
+      const user = document.getElementById("user").value.trim();
+      const limit = document.getElementById("limit").value;
+      const cols = document.getElementById("cols").value;
+
+      mount.innerHTML = `<div class="loading">Loading…</div>`;
+      mount.innerHTML = `<div class="vimeo-latest-widget"></div>`;
+
+      const s = document.createElement("script");
+      s.src =
+        `${location.origin}/widget.js?user=${encodeURIComponent(user)}` +
+        `&limit=${encodeURIComponent(limit)}` +
+        `&cols=${encodeURIComponent(cols)}` +
+        `&t=${Date.now()}`;
+      s.async = true;
+
+      document.body.appendChild(s);
+    }
+
+    document.getElementById("btnPreview").addEventListener("click", preview);
+
+    document.getElementById("btnCopy").addEventListener("click", async () => {
+      setEmbedText();
+      const txt = document.getElementById("embedCode").textContent;
+      await navigator.clipboard.writeText(txt);
+      alert("Embed code copied!");
+    });
+
+    setEmbedText();
+    preview();
+  </script>
+</body>
+</html>

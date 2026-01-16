@@ -7,7 +7,7 @@ from flask import Flask, jsonify, request, render_template, Response
 app = Flask(__name__)
 
 # ----------------------------
-# Simple in-memory cache (optional but helpful)
+# Simple in-memory cache
 # ----------------------------
 CACHE_TTL_SECONDS = 300  # 5 minutes
 _cache = {}  # key -> {"ts": float, "data": any}
@@ -40,13 +40,10 @@ def normalize_user_input_to_username(user_input: str) -> str:
     if not s:
         return ""
 
-    # If they paste a URL, extract path segment
-    # e.g. https://vimeo.com/melies -> melies
     m = re.search(r"vimeo\.com/([^/?#]+)", s, re.IGNORECASE)
     if m:
         return m.group(1).strip()
 
-    # Otherwise treat it as username
     return s
 
 def vimeo_simple_api_url(username: str) -> str:
@@ -77,11 +74,7 @@ def styles_css():
 def api_vimeo():
     """
     GET /api/vimeo?user=USERNAME_OR_PROFILE_URL&limit=6
-
-    Uses Vimeo "simple API" endpoint:
-      https://vimeo.com/api/v2/<username>/videos.json
-
-    Returns list of latest public videos.
+    Uses: https://vimeo.com/api/v2/<username>/videos.json
     """
     user_input = (request.args.get("user") or "").strip()
     limit_raw = request.args.get("limit") or "6"
@@ -105,10 +98,7 @@ def api_vimeo():
         return jsonify(cached)
 
     try:
-        # Some endpoints behave better with a UA header
-        headers = {
-            "User-Agent": "Mozilla/5.0 (VimeoLatestWidget/1.0)"
-        }
+        headers = {"User-Agent": "Mozilla/5.0 (VimeoLatestWidget/1.0)"}
         r = requests.get(api_url, headers=headers, timeout=12)
         r.raise_for_status()
 
@@ -129,6 +119,9 @@ def api_vimeo():
                 "thumbnail": v.get("thumbnail_large") or v.get("thumbnail_medium") or v.get("thumbnail_small") or "",
                 "published": v.get("upload_date", ""),
                 "duration": v.get("duration", None),
+                "user_name": v.get("user_name", "") or "",
+                "user_url": v.get("user_url", "") or "",
+                "user_portrait": v.get("user_portrait_huge") or v.get("user_portrait_large") or v.get("user_portrait_medium") or ""
             })
 
         payload = {
